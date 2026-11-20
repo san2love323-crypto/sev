@@ -1,0 +1,797 @@
+<!doctype html>
+<!-- 상점 화면 전체가 이 한 파일에 들어 있습니다. server.py 와 같은 폴더에 두고 python server.py 로 실행하세요. -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="theme-color" content="#151722">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>상점</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+/* 코드 에디터처럼 생긴 상점. 상품은 에디터 창, 글자색은 문법 강조 색에서 가져온다.
+   bg(에디터 배경) · panel(창) · text · comment(보조 글자) · keyword(보라) · fn(하늘) · string(살구) · num(민트) */
+:root {
+  --bg: #151722;
+  --panel: #1d2030;
+  --panel-2: #262a3d;
+  --line: #2f3449;
+  --text: #dfe3f2;
+  --comment: #7a83a6;
+  --keyword: #b99aff;
+  --fn: #6cc6ff;
+  --string: #ffb884;
+  --num: #86e3b4;
+  --err: #ff8fa3;
+  --npay: #03c75a;
+  --mono: "JetBrains Mono", "D2Coding", "Nanum Gothic Coding", ui-monospace, Menlo, Consolas, monospace;
+  --body: "Pretendard", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+body {
+  margin: 0; color: var(--text); font-family: var(--body); font-size: 16px; line-height: 1.7;
+  min-height: 100vh; display: flex; flex-direction: column;
+  background:
+    radial-gradient(700px 420px at 88% -6%, rgba(108, 198, 255, .13), transparent 70%),
+    radial-gradient(640px 460px at 4% 12%, rgba(185, 154, 255, .14), transparent 70%),
+    linear-gradient(rgba(47, 52, 73, .4) 1px, transparent 1px) 0 0 / 100% 32px,
+    var(--bg);
+  background-attachment: fixed, fixed, local, fixed;
+}
+/* 줄 간격마다 아주 옅은 가로줄: 에디터의 줄을 닮게 */
+body { background-blend-mode: normal, normal, soft-light, normal; }
+main { flex: 1; width: 100%; }
+a { color: inherit; }
+img { max-width: 100%; display: block; }
+h1, h2 { font-family: var(--mono); font-weight: 700; line-height: 1.3; margin: 0; word-break: keep-all; letter-spacing: -.01em; }
+code { font-family: var(--mono); background: var(--panel-2); padding: 2px 7px; border-radius: 5px; font-size: .9em; }
+::selection { background: rgba(108, 198, 255, .35); }
+:focus-visible { outline: 2px solid var(--fn); outline-offset: 3px; border-radius: 4px; }
+[hidden] { display: none !important; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.skip { position: absolute; left: -999px; top: 0; background: var(--fn); color: var(--bg); padding: 10px 16px; z-index: 20; }
+.skip:focus { left: 0; }
+.muted { color: var(--comment); }
+
+/* ── 머리와 발 ── */
+.top {
+  position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  padding: 14px clamp(18px, 5vw, 72px); background: rgba(21, 23, 34, .82);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line);
+}
+.wordmark { font-family: var(--mono); font-weight: 700; font-size: 19px; text-decoration: none; color: var(--text); }
+.wordmark::before { content: "~/"; color: var(--num); }
+.top nav { display: flex; gap: clamp(14px, 2.6vw, 30px); font-size: 15px; align-items: center; }
+.top nav a { text-decoration: none; color: #b9bfd6; padding: 4px 0; border-bottom: 2px solid transparent; transition: color .15s ease, border-color .15s ease; }
+.top nav a:hover { color: var(--fn); border-bottom-color: var(--fn); }
+.count { display: inline-block; min-width: 21px; padding: 0 6px; border-radius: 6px; background: var(--num); color: var(--bg); font-family: var(--mono); font-size: 12px; font-weight: 700; line-height: 21px; text-align: center; }
+.admin-link { color: var(--string) !important; }
+
+.bottom { margin-top: 110px; padding: 40px clamp(18px, 5vw, 72px) 48px; border-top: 1px solid var(--line); background: rgba(0, 0, 0, .22); }
+.foot-mark { font-family: var(--mono); font-weight: 700; font-size: 16px; margin: 0 0 6px; }
+.foot-mark::before { content: "// "; color: var(--comment); }
+.foot-info { margin: 0; font-size: 13px; color: var(--comment); max-width: 80ch; }
+
+.notice { margin: 20px clamp(18px, 5vw, 72px) 0; padding: 12px 18px; background: rgba(108, 198, 255, .1); border: 1px solid rgba(108, 198, 255, .45); border-left-width: 4px; border-radius: 8px; }
+.notice p { margin: 0; }
+
+/* ── 첫 화면: 코드 한 줄이 간판 ── */
+.hero { padding: clamp(56px, 9vw, 120px) clamp(18px, 5vw, 72px) clamp(44px, 6vw, 80px); max-width: 1280px; margin: 0 auto; }
+.hero .cmt { font-family: var(--mono); color: var(--comment); font-size: clamp(15px, 1.7vw, 20px); margin: 0 0 clamp(10px, 1.4vw, 18px); }
+.hero h1 { font-size: clamp(30px, 6.6vw, 92px); line-height: 1.15; font-weight: 800; }
+.hero h1 .k { color: var(--keyword); }
+.hero h1 .v { color: var(--fn); }
+.hero h1 .s { color: var(--string); }
+.hero h1 .p { color: var(--comment); font-weight: 400; }
+.caret { display: inline-block; width: .55em; height: 1em; margin-left: .08em; vertical-align: -.12em; background: var(--num); animation: blink 1.05s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── 에디터 창 모양의 상품 ── */
+.win { display: block; border-radius: 12px; overflow: hidden; background: var(--panel); border: 1px solid var(--line);
+  box-shadow: 0 28px 50px -30px rgba(0, 0, 0, .85); transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease; }
+.win-bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: var(--panel-2); border-bottom: 1px solid var(--line); }
+.win-bar i { width: 10px; height: 10px; border-radius: 50%; background: #454b66; }
+.win-bar i:nth-child(1) { background: #ff8fa3; } .win-bar i:nth-child(2) { background: #ffd479; } .win-bar i:nth-child(3) { background: #86e3b4; }
+.win-bar b { margin-left: 8px; font-family: var(--mono); font-weight: 500; font-size: 12.5px; color: var(--comment); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mat { display: block; aspect-ratio: 16 / 10; overflow: hidden; background:
+  linear-gradient(135deg, rgba(185, 154, 255, .16), rgba(108, 198, 255, .10) 60%, rgba(134, 227, 180, .12)), var(--panel); }
+.mat img { width: 100%; height: 100%; object-fit: cover; }
+.no-image { display: grid; place-items: center; height: 100%; font-family: var(--mono); font-weight: 800; font-size: clamp(40px, 6vw, 76px); color: var(--fn); opacity: .85; }
+.piece, .feature { text-decoration: none; display: block; }
+.piece:hover .win, .piece:focus-visible .win, .feature:hover .win { transform: translateY(-6px); border-color: var(--fn); box-shadow: 0 34px 60px -30px rgba(108, 198, 255, .45); }
+
+.feature { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 72px); align-items: center;
+  max-width: 1280px; margin: 0 auto clamp(64px, 9vw, 110px); padding: 0 clamp(18px, 5vw, 72px); }
+.feature-text .new { font-family: var(--mono); color: var(--num); font-size: 14px; margin: 0 0 12px; }
+.feature-text .new::before { content: "+ "; }
+.feature-text h2 { font-size: clamp(28px, 4vw, 48px); }
+.feature-text .desc { color: #b9bfd6; margin: 16px 0 0; max-width: 46ch; white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.feature-text .price { font-family: var(--mono); font-size: 24px; font-weight: 700; margin: 22px 0 26px; color: var(--num); }
+
+.wall-title { font-size: clamp(20px, 2.4vw, 26px); max-width: 1280px; margin: 0 auto clamp(22px, 3vw, 34px); padding: 0 clamp(18px, 5vw, 72px); }
+.wall-title::before { content: "ls "; color: var(--keyword); }
+.wall { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(26px, 3.4vw, 44px) clamp(18px, 2.6vw, 34px); max-width: 1280px; margin: 0 auto; padding: 0 clamp(18px, 5vw, 72px); align-items: start; }
+.caption { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; margin-top: 14px; }
+.caption .name { font-weight: 600; font-size: 17px; word-break: keep-all; }
+.caption .price { font-family: var(--mono); font-size: 15px; color: var(--num); white-space: nowrap; }
+.caption .price.out { color: var(--err); }
+.empty { max-width: 1280px; margin: 0 auto; padding: 0 clamp(18px, 5vw, 72px) 60px; }
+.empty p { font-family: var(--mono); color: var(--comment); font-size: 18px; }
+
+/* ── 상품 상세 ── */
+.detail { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 72px); max-width: 1280px; margin: 0 auto; padding: clamp(32px, 5vw, 64px) clamp(18px, 5vw, 72px) 0; align-items: start; }
+.detail-text { position: sticky; top: 96px; }
+.detail-text h1 { font-size: clamp(26px, 3.4vw, 42px); }
+.detail-price { font-family: var(--mono); font-weight: 700; font-size: 26px; margin: 12px 0 24px; color: var(--num); }
+.prose { white-space: pre-line; color: #c3c9de; max-width: 58ch; margin-bottom: 30px; padding: 18px 20px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--keyword); border-radius: 8px; }
+.buy { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.buy label { font-size: 14px; color: var(--comment); display: grid; gap: 6px; }
+.buy input { width: 88px; }
+.soldout { font-family: var(--mono); font-size: 18px; color: var(--err); }
+.hint { color: var(--comment); font-size: 14px; margin: 12px 0 0; }
+.thumbs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.thumbs button { width: 84px; height: 54px; padding: 0; border-radius: 8px; overflow: hidden; cursor: pointer; background: var(--panel); border: 2px solid var(--line); opacity: .65; transition: opacity .15s ease, border-color .15s ease; }
+.thumbs button:hover { opacity: 1; }
+.thumbs button[aria-current] { opacity: 1; border-color: var(--fn); }
+.thumbs img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── 버튼과 입력 ── */
+.btn { display: inline-block; font: inherit; font-weight: 700; text-decoration: none; text-align: center; cursor: pointer;
+  color: #0d1320; background: var(--fn); border: 0; padding: 12px 24px; border-radius: 9px;
+  box-shadow: 0 10px 26px -12px rgba(108, 198, 255, .9); transition: transform .15s ease, background .15s ease, box-shadow .15s ease; }
+.btn:hover { background: #93d6ff; transform: translateY(-2px); box-shadow: 0 16px 30px -12px rgba(108, 198, 255, 1); }
+.btn:active { transform: none; }
+.btn-quiet { background: transparent; color: var(--fn); box-shadow: inset 0 0 0 1.5px var(--fn); }
+.btn-quiet:hover { background: rgba(108, 198, 255, .14); box-shadow: inset 0 0 0 1.5px var(--fn); }
+.btn-wide { width: 100%; padding: 16px 24px; font-size: 17px; margin-top: 24px; }
+.btn-npay { background: var(--npay); color: #fff; box-shadow: 0 10px 26px -12px rgba(3, 199, 90, .9); }
+.btn-npay:hover { background: #02b351; box-shadow: 0 16px 30px -12px rgba(3, 199, 90, 1); }
+.btn-mint { background: var(--num); box-shadow: 0 10px 26px -12px rgba(134, 227, 180, .9); }
+.btn-mint:hover { background: #a6efc9; box-shadow: 0 16px 30px -12px rgba(134, 227, 180, 1); }
+.btn:disabled { cursor: wait; }
+.link { font: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; color: var(--comment); }
+.link:hover { color: var(--fn); }
+main a:not(.btn):not(.piece):not(.feature):not(.line-name) { color: var(--fn); text-underline-offset: 4px; }
+
+input, textarea, select { font: inherit; color: var(--text); background: #12141e; border: 1px solid var(--line); border-radius: 9px; padding: 12px 14px; width: 100%; transition: border-color .15s ease, box-shadow .15s ease; }
+select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--comment) 50%), linear-gradient(135deg, var(--comment) 50%, transparent 50%); background-position: calc(100% - 20px) 55%, calc(100% - 14px) 55%; background-size: 6px 6px; background-repeat: no-repeat; padding-right: 38px; }
+input::placeholder, textarea::placeholder { color: #5b6282; }
+input:focus, textarea:focus, select:focus { border-color: var(--fn); outline: none; box-shadow: 0 0 0 4px rgba(108, 198, 255, .18); }
+input[readonly] { color: var(--comment); background: #171a27; }
+input[type="checkbox"], input[type="radio"] { width: 18px; height: 18px; accent-color: var(--fn); }
+input[type="file"]::file-selector-button { font: inherit; margin-right: 12px; padding: 6px 14px; border-radius: 7px; border: 1px solid var(--fn); background: transparent; color: var(--fn); cursor: pointer; }
+
+/* ── 장바구니 · 주문 · 결제 · 충전: 창 하나 ── */
+.sheet, .panel-narrow { max-width: 760px; margin: clamp(30px, 5vw, 64px) auto 0; padding: clamp(24px, 4.4vw, 44px); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 40px 70px -45px rgba(0, 0, 0, .9); }
+.sheet-narrow { max-width: 480px; }
+@media (max-width: 800px) { .sheet, .panel-narrow { margin-left: 14px; margin-right: 14px; } }
+.sheet h1, .panel-narrow h1 { font-size: clamp(24px, 3.4vw, 34px); margin-bottom: 8px; }
+.sheet h2 { font-size: 18px; margin: 36px 0 8px; color: var(--keyword); }
+.sheet h2::before { content: "# "; color: var(--comment); }
+.lead { color: var(--comment); margin: 0 0 24px; }
+.fields { display: grid; gap: 16px; margin-top: 20px; }
+.fields label { display: grid; gap: 7px; font-size: 14px; color: var(--comment); }
+.row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
+.row > label + label { min-width: 120px; }
+.row-2 { grid-template-columns: 1fr 1fr; }
+.check { display: flex !important; align-items: center; gap: 10px; color: var(--text) !important; font-size: 16px !important; }
+.lines { list-style: none; margin: 20px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.lines li { display: grid; grid-template-columns: 1fr auto auto; gap: 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.lines-plain li { grid-template-columns: 1fr auto; padding: 12px 0; }
+.line-name { font-weight: 600; font-size: 17px; text-decoration: none; word-break: keep-all; }
+a.line-name:hover { color: var(--fn); }
+.line-qty { display: flex; gap: 12px; align-items: center; font-size: 14px; }
+.line-qty input { width: 74px; padding: 8px 10px; }
+.line-sum, .totals dd { font-family: var(--mono); white-space: nowrap; }
+.totals { margin: 20px 0 0; display: grid; gap: 8px; }
+.totals div { display: flex; justify-content: space-between; }
+.totals dt { color: var(--comment); }
+.totals dd { margin: 0; }
+.totals .grand { border-top: 1px dashed var(--line); padding-top: 14px; margin-top: 8px; font-size: 20px; }
+.totals .grand dt { color: var(--text); font-weight: 700; }
+.totals .grand dd { color: var(--num); font-weight: 700; }
+.ship-to { margin: 22px 0 0; padding: 14px 18px; background: #12141e; border: 1px solid var(--line); border-radius: 9px; }
+.tracking { font-family: var(--mono); font-size: 18px; margin: 0 0 8px; color: var(--num); }
+.test-note { margin: 20px 0 0; padding: 12px 16px; background: rgba(255, 212, 121, .1); border: 1px solid rgba(255, 212, 121, .5); border-radius: 9px; font-size: 14px; color: #ffe2a6; }
+.paybox { margin-top: 22px; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: #171a27; }
+.paybox + .paybox { margin-top: 14px; }
+.paybox h3 { margin: 0 0 4px; font-size: 16px; }
+.paybox p { margin: 0; color: var(--comment); font-size: 14px; }
+.paybox .btn-wide { margin-top: 14px; }
+
+/* 충전금 */
+.balance { font-family: var(--mono); font-weight: 800; font-size: clamp(36px, 7vw, 56px); color: var(--num); line-height: 1.1; margin: 4px 0 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.chips .btn { font-family: var(--mono); padding: 10px 18px; }
+.tx { list-style: none; margin: 10px 0 0; padding: 0; font-size: 14px; }
+.tx li { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.tx time { font-family: var(--mono); color: var(--comment); font-size: 13px; }
+.tx b { font-family: var(--mono); }
+.tx .plus { color: var(--num); } .tx .minus { color: var(--string); } .tx .bad { color: var(--err); text-decoration: line-through; }
+.card-line { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; }
+
+/* ── 관리자 ── */
+.admin-bar { display: flex; gap: 24px; align-items: center; padding: 10px clamp(18px, 5vw, 72px); background: #10121b; border-bottom: 1px solid var(--line); font-size: 15px; }
+.admin-bar a { text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; color: #b9bfd6 !important; }
+.admin-bar a[aria-current] { border-bottom-color: var(--string); color: var(--string) !important; }
+.admin-bar form { margin-left: auto; }
+.panel { padding: 30px clamp(18px, 5vw, 72px) 0; max-width: 1400px; margin: 0 auto; }
+.panel h1 { font-size: 28px; margin-bottom: 10px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.panel h2 { font-size: 18px; margin: 34px 0 10px; color: var(--keyword); }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 22px; }
+.tabs a { text-decoration: none; padding: 6px 13px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; background: var(--panel); color: #b9bfd6 !important; }
+.tabs a[aria-current] { background: var(--fn); color: var(--bg) !important; border-color: var(--fn); font-weight: 700; }
+.tabs b { font-family: var(--mono); margin-left: 2px; }
+.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 15px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.grid th, .grid td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--line); }
+.grid tr:last-child td { border-bottom: 0; }
+.grid tbody tr:hover { background: rgba(108, 198, 255, .06); }
+.grid th { font-weight: 600; font-size: 13px; color: var(--comment); background: var(--panel-2); }
+.grid .num { text-align: right; font-family: var(--mono); white-space: nowrap; }
+.tag { display: inline-block; font-family: var(--body); font-size: 13px; font-weight: 600; padding: 2px 10px; border-radius: 6px; background: var(--panel-2); color: #b9bfd6; white-space: nowrap; }
+.tag-paid { background: var(--string); color: var(--bg); }
+.tag-review { background: rgba(255, 143, 163, .2); color: var(--err); }
+.tag-purchased, .tag-shipped { background: rgba(108, 198, 255, .18); color: var(--fn); }
+.tag-done { background: rgba(134, 227, 180, .16); color: var(--num); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(22px, 4vw, 52px); }
+.buy-list { list-style: none; padding: 0; margin: 0 0 16px; }
+.buy-list li { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.copy-list { margin: 0 0 16px; }
+.copy-list div { display: grid; grid-template-columns: 88px 1fr auto; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.copy-list dt { color: var(--comment); font-size: 14px; }
+.copy-list dd { margin: 0; word-break: break-all; }
+.inline { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.inline label { display: grid; gap: 6px; font-size: 14px; color: var(--comment); flex: 1 1 180px; }
+.danger { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; gap: 18px; align-items: baseline; flex-wrap: wrap; }
+.danger .link { color: var(--err); }
+.mini { width: 56px; height: 36px; object-fit: cover; border-radius: 5px; border: 1px solid var(--line); }
+.photos { border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 0; display: grid; gap: 14px; }
+.photos legend { padding: 0 8px; font-size: 14px; color: var(--comment); }
+.photo-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.photo-grid:empty { display: none; }
+.photo-grid li { display: grid; gap: 6px; font-size: 13px; }
+.photo-grid img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.photo-grid .check { font-size: 14px !important; }
+.drop { display: grid !important; place-items: center; text-align: center; padding: 26px 16px; border: 1.5px dashed var(--fn); border-radius: 10px; cursor: pointer; color: var(--text) !important; font-size: 15px !important; background: rgba(108, 198, 255, .05); position: relative; }
+.drop:hover, .drop.over, .drop:focus-within { background: rgba(108, 198, 255, .14); }
+.drop b { color: var(--fn); }
+.drop small { color: var(--comment); }
+.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+@media (max-width: 900px) {
+  .wall { grid-template-columns: repeat(2, 1fr); }
+  .feature, .detail { grid-template-columns: 1fr; }
+  .detail-text { position: static; }
+  .two { grid-template-columns: 1fr; }
+  .grid { display: block; overflow-x: auto; white-space: nowrap; }
+}
+@media (max-width: 560px) {
+  .wall { grid-template-columns: 1fr; }
+  .lines li { grid-template-columns: 1fr auto; }
+  .line-qty { grid-column: 1 / -1; grid-row: 2; }
+  .row, .row-2 { grid-template-columns: 1fr; }
+  .top { padding: 12px 14px; }
+  .top nav { gap: 12px; font-size: 14px; }
+  .tx li { grid-template-columns: 1fr auto; }
+  .tx time { grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .caret { animation: none; }
+  .win, .btn { transition: none; }
+  .piece:hover .win, .feature:hover .win, .btn:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#app">본문으로 건너뛰기</a>
+<header class="top">
+  <a class="wordmark" id="wordmark" href="#/"></a>
+  <nav aria-label="주요 메뉴">
+    <a id="creditLink" href="#/credit" hidden>충전금</a>
+    <a href="#/orders">주문 조회</a>
+    <a href="#/cart">장바구니<span id="cartCount"></span></a>
+    <a class="admin-link" id="adminLink" href="#/admin" hidden>관리자</a>
+  </nav>
+</header>
+<main>
+  <div id="notice"></div>
+  <div id="app" tabindex="-1"></div>
+  <noscript><section class="sheet sheet-narrow"><h1>자바스크립트를 켜 주세요</h1><p class="lead">이 상점은 자바스크립트가 있어야 열립니다.</p></section></noscript>
+</main>
+<footer class="bottom">
+  <p class="foot-mark" id="footMark"></p>
+  <p class="foot-info" id="footInfo"></p>
+</footer>
+<script>
+/* 쇼핑몰 화면 전체. 주소 뒤의 #/... 로 화면을 바꾸고, 데이터는 server.py 의 /api 에서 가져온다. */
+(function () {
+  'use strict';
+  var app = document.getElementById('app'), noticeBox = document.getElementById('notice');
+  var S = { csrf: '', admin: false, naverpay: false, credit: false, credit_user: false, testpay: false, cart_count: 0, shop: {} };
+  var timer = null, returnTo = null;
+
+  // 충전하러 갔다가 돌아올 주문 화면. 토스 결제창을 다녀와도 남도록 탭 저장소에 둔다.
+  try { returnTo = sessionStorage.getItem('returnTo'); } catch (e) {}
+  function setReturn(v) { returnTo = v; try { if (v) sessionStorage.setItem('returnTo', v); else sessionStorage.removeItem('returnTo'); } catch (e) {} }
+
+  // ── 도구 ──
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function won(n) { return Number(n).toLocaleString('ko-KR') + '원'; }
+  function go(hash) { if (location.hash === hash) render(); else location.hash = hash; }
+  function notice(msg) {
+    noticeBox.innerHTML = msg ? '<div class="notice" role="status"><p>' + esc(msg) + '</p></div>' : '';
+    if (msg) window.scrollTo({ top: 0 });
+  }
+  function api(path, opt) {
+    opt = opt || {};
+    var init = { method: opt.method || 'GET', headers: {}, credentials: 'same-origin' };
+    if (init.method === 'POST') init.headers['X-CSRF'] = S.csrf;
+    if (opt.form) init.body = opt.form;
+    else if (opt.body) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(opt.body); }
+    return fetch(path, init).then(function (r) {
+      return r.json().catch(function () { return { error: '서버 응답을 읽지 못했어요.' }; }).then(function (data) {
+        if (!r.ok) { var e = new Error(data.error || '요청을 처리하지 못했어요.'); e.status = r.status; throw e; }
+        return data;
+      });
+    }, function () { throw new Error('서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.'); });
+  }
+  function loadState() { return api('/api/state').then(function (s) { S = s; chrome(); }); }
+  function loadScript(src) {
+    return new Promise(function (ok, fail) {
+      if (document.querySelector('script[src="' + src + '"]')) return ok();
+      var s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = fail; document.head.appendChild(s);
+    });
+  }
+  function on(sel, ev, fn) { Array.prototype.forEach.call(app.querySelectorAll(sel), function (el) { el.addEventListener(ev, fn); }); }
+  function formData(form) { var o = {}; new FormData(form).forEach(function (v, k) { o[k] = v; }); return o; }
+  function busy(btn, yes) { if (btn) { btn.disabled = yes; btn.style.opacity = yes ? .6 : ''; } }
+
+  // ── 머리·발 (상점 이름, 장바구니 수) ──
+  function chrome() {
+    var name = S.shop.name || '';
+    document.title = name;
+    document.getElementById('wordmark').textContent = name;
+    document.getElementById('footMark').textContent = name;
+    document.getElementById('footInfo').textContent = S.shop.info || '';
+    document.getElementById('cartCount').innerHTML = S.cart_count ? ' <span class="count">' + S.cart_count + '</span>' : '';
+    document.getElementById('adminLink').hidden = !S.admin;
+    document.getElementById('creditLink').hidden = !S.credit;
+  }
+
+  // ── 조각 ──
+  function frame(p, big) {
+    var inner = p.images && p.images.length
+      ? '<img src="' + esc(p.images[0]) + '" alt="' + esc(p.name) + '"' + (big ? ' id="mainImg"' : ' loading="lazy"') + '>'
+      : '<span class="no-image" aria-hidden="true">&lt;/&gt;</span>';
+    return '<span class="win"><span class="win-bar" aria-hidden="true"><i></i><i></i><i></i><b>' + esc(p.name) + '</b></span><span class="mat">' + inner + '</span></span>';
+  }
+  function bindCopy() {
+    on('[data-copy]', 'click', function () {
+      var b = this, text = b.getAttribute('data-copy'), label = b.textContent;
+      function done() { b.textContent = '복사됨'; setTimeout(function () { b.textContent = label; }, 1200); }
+      if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done); return; }
+      var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); done();
+    });
+  }
+  function totals(t) {
+    return '<dl class="totals"><div><dt>상품 금액</dt><dd>' + won(t.subtotal) + '</dd></div>' +
+      '<div><dt>배송비</dt><dd>' + (t.shipping ? won(t.shipping) : '무료') + '</dd></div>' +
+      '<div class="grand"><dt>결제 금액</dt><dd>' + won(t.total) + '</dd></div></dl>';
+  }
+  function plainLines(items) {
+    return '<ul class="lines lines-plain">' + items.map(function (i) {
+      return '<li><span class="line-name">' + esc(i.name) + ' × ' + i.qty + '</span><span class="line-sum">' + won(i.price * i.qty) + '</span></li>';
+    }).join('') + '</ul>';
+  }
+  function message(title, body) {
+    app.innerHTML = '<section class="sheet sheet-narrow"><h1>' + esc(title) + '</h1>' + (body ? '<p class="lead">' + esc(body) + '</p>' : '') +
+      '<a class="btn" href="#/">처음으로 가기</a></section>';
+  }
+
+  // ── 상점: 첫 화면 ──
+  function vHome() {
+    return api('/api/products').then(function (ps) {
+      var h = '<section class="hero"><p class="cmt">// ' + esc(S.shop.tagline) + '</p><h1 aria-label="' + esc(S.shop.name) + '"><span class="k">const</span> <span class="v">shop</span> <span class="p">=</span> <span class="s">"' + esc(S.shop.name) + '"</span><span class="p">;</span><span class="caret" aria-hidden="true"></span></h1></section>';
+      if (!ps.length) {
+        h += '<section class="empty"><p>// 아직 올라온 도구가 없어요</p>' + (S.admin ? '<a class="btn" href="#/admin/product/new">첫 상품 올리기</a>' : '') + '</section>';
+      } else {
+        var f = ps[0];
+        h += '<a class="feature" href="#/p/' + f.id + '">' + frame(f, true).replace(' id="mainImg"', '') + '<div class="feature-text"><p class="new">새로 올라온 도구</p><h2>' + esc(f.name) + '</h2>' +
+          (f.description ? '<p class="desc">' + esc(f.description) + '</p>' : '') +
+          '<p class="price">' + (f.stock > 0 ? won(f.price) : '품절') + '</p><span class="btn">자세히 보기</span></div></a>';
+        if (ps.length > 1) {
+          h += '<h2 class="wall-title">모든 도구</h2><section class="wall" aria-label="모든 도구">' + ps.slice(1).map(function (p) {
+            return '<a class="piece" href="#/p/' + p.id + '">' + frame(p) + '<span class="caption"><span class="name">' + esc(p.name) + '</span>' +
+              (p.stock > 0 ? '<span class="price">' + won(p.price) + '</span>' : '<span class="price out">품절</span>') + '</span></a>';
+          }).join('') + '</section>';
+        }
+      }
+      app.innerHTML = h;
+    });
+  }
+
+  // ── 상점: 상품 상세 ──
+  function vProduct(id) {
+    return api('/api/products/' + encodeURIComponent(id)).then(function (p) {
+      document.title = p.name + ' | ' + S.shop.name;
+      var thumbs = p.images.length > 1 ? '<div class="thumbs" role="group" aria-label="다른 사진 보기">' + p.images.map(function (u, i) {
+        return '<button type="button" data-src="' + esc(u) + '"' + (i ? '' : ' aria-current="true"') + '><img src="' + esc(u) + '" alt="사진 ' + (i + 1) + '"></button>';
+      }).join('') + '</div>' : '';
+      var buy = p.stock > 0
+        ? '<form class="buy" id="buy"><label>수량 <input type="number" name="qty" value="1" min="1" max="' + Math.min(p.stock, 99) + '" inputmode="numeric"></label><button class="btn" type="submit">장바구니에 담기</button></form>' +
+          (p.stock <= 3 ? '<p class="hint">' + p.stock + '개 남았어요.</p>' : '')
+        : '<p class="soldout">지금은 품절이에요.</p>';
+      app.innerHTML = '<article class="detail"><div class="detail-art">' + frame(p, true) + thumbs + '</div><div class="detail-text"><h1>' + esc(p.name) + '</h1>' +
+        '<p class="detail-price">' + won(p.price) + '</p>' + (p.description ? '<div class="prose">' + esc(p.description) + '</div>' : '') + buy + '</div></article>';
+      on('.thumbs button', 'click', function () {
+        document.getElementById('mainImg').src = this.dataset.src;
+        Array.prototype.forEach.call(app.querySelectorAll('.thumbs button'), function (b) { b.removeAttribute('aria-current'); });
+        this.setAttribute('aria-current', 'true');
+      });
+      on('#buy', 'submit', function (ev) {
+        ev.preventDefault();
+        api('/api/cart', { method: 'POST', body: { pid: p.id, qty: Number(formData(this).qty) || 1, mode: 'add' } }).then(function (c) {
+          S.cart_count = c.count; chrome(); pendingNotice = c.message; go('#/cart');
+        }).catch(function (e) { notice(e.message); });
+      });
+    });
+  }
+  var pendingNotice = null;
+
+  // ── 상점: 장바구니 ──
+  function drawCart(c) {
+    S.cart_count = c.count; chrome();
+    if (!c.lines.length) {
+      app.innerHTML = '<section class="sheet"><h1>장바구니</h1><p class="lead">담은 상품이 없어요.</p><a class="btn" href="#/">도구 보러 가기</a></section>';
+      return;
+    }
+    app.innerHTML = '<section class="sheet"><h1>장바구니</h1><ul class="lines">' + c.lines.map(function (l) {
+      return '<li><a class="line-name" href="#/p/' + l.id + '">' + esc(l.name) + '</a><form class="line-qty" data-pid="' + l.id + '"><label class="sr" for="q' + l.id + '">수량</label>' +
+        '<input id="q' + l.id + '" type="number" name="qty" value="' + l.qty + '" min="0" max="99" inputmode="numeric"><button class="link" type="submit">수량 바꾸기</button>' +
+        '<button class="link" type="button" data-remove="' + l.id + '">빼기</button></form><span class="line-sum">' + won(l.sum) + '</span></li>';
+    }).join('') + '</ul>' + totals(c) +
+      (c.shipping && c.free_over ? '<p class="hint">' + won(c.free_over - c.subtotal) + ' 더 담으면 배송비가 무료예요.</p>' : '') +
+      '<a class="btn btn-wide" href="#/checkout">주문하기</a></section>';
+    function change(pid, qty) {
+      api('/api/cart', { method: 'POST', body: { pid: pid, qty: qty, mode: 'set' } }).then(function (c2) { notice(c2.message); drawCart(c2); }).catch(function (e) { notice(e.message); });
+    }
+    on('.line-qty', 'submit', function (ev) { ev.preventDefault(); change(this.dataset.pid, Number(formData(this).qty) || 0); });
+    on('[data-remove]', 'click', function () { change(this.dataset.remove, 0); });
+  }
+  function vCart() { return api('/api/cart').then(drawCart); }
+
+  // ── 상점: 주문서 ──
+  function vCheckout() {
+    return api('/api/cart').then(function (c) {
+      if (!c.lines.length) return go('#/cart');
+      app.innerHTML = '<section class="sheet"><h1>주문하기</h1><form class="fields" id="order">' +
+        '<label>받는 분<input name="name" autocomplete="name" required maxlength="40"></label>' +
+        '<label>연락처<input name="phone" autocomplete="tel" inputmode="tel" placeholder="010-0000-0000" required maxlength="20"></label>' +
+        '<div class="row"><label>우편번호<input id="postcode" name="postcode" readonly required></label><button class="btn btn-quiet" type="button" id="findAddr">주소 찾기</button></div>' +
+        '<label>주소<input id="addr1" name="addr1" readonly required></label>' +
+        '<label>상세 주소<input id="addr2" name="addr2" autocomplete="address-line2" maxlength="200" placeholder="동, 호수"></label>' +
+        '<label>배송 메모 (선택)<input name="memo" maxlength="200" placeholder="문 앞에 놓아 주세요"></label>' +
+        '<h2>주문 상품</h2>' + plainLines(c.lines) + totals(c) + '<button class="btn btn-wide" type="submit">결제 단계로 가기</button></form></section>';
+      var postcodeReady = loadScript('https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js').catch(function () {});
+      on('#findAddr', 'click', function () {
+        postcodeReady.then(function () {
+          if (!window.daum || !daum.Postcode) return notice('주소 찾기를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요.');
+          new daum.Postcode({ oncomplete: function (d) {
+            document.getElementById('postcode').value = d.zonecode;
+            document.getElementById('addr1').value = d.roadAddress || d.jibunAddress;
+            document.getElementById('addr2').focus();
+          } }).open();
+        });
+      });
+      on('#order', 'submit', function (ev) {
+        ev.preventDefault();
+        var btn = this.querySelector('button[type=submit]'); busy(btn, true);
+        api('/api/orders', { method: 'POST', body: formData(this) }).then(function (o) { go('#/order/' + o.order_no + '/' + o.token); })
+          .catch(function (e) { busy(btn, false); notice(e.message); });
+      });
+    });
+  }
+
+  // ── 상점: 주문 확인 + 결제 ──
+  function vOrder(no, token) {
+    var path = '/api/orders/' + encodeURIComponent(no) + '/' + encodeURIComponent(token);
+    return api(path).then(function (o) {
+      var pending = o.status === 'pending';
+      return (pending && S.credit ? api('/api/credit') : Promise.resolve(null)).then(function (w) { drawOrder(o, w, path); });
+    });
+  }
+  function drawOrder(o, w, path) {
+    var pending = o.status === 'pending', pay = '';
+    if (pending && o.naver) pay += '<button class="btn btn-npay btn-wide" type="button" id="npay">네이버페이로 ' + won(o.total) + ' 결제하기</button>';
+    if (pending && w && w.on) {
+      pay += '<div class="paybox"><h3>충전금으로 결제</h3>';
+      if (!w.logged_in) pay += '<p>계좌이체로 충전해 둔 금액으로 결제해요.</p><a class="btn btn-quiet btn-wide" href="#/credit" data-return>충전 계정 로그인</a>';
+      else if (w.balance >= o.total) pay += '<p>내 충전금 ' + won(w.balance) + ' → 결제 후 ' + won(w.balance - o.total) + '</p><button class="btn btn-mint btn-wide" type="button" id="creditpay">충전금으로 ' + won(o.total) + ' 결제하기</button>';
+      else pay += '<p>내 충전금 ' + won(w.balance) + ' · ' + won(o.total - w.balance) + ' 모자라요.</p><a class="btn btn-quiet btn-wide" href="#/credit" data-return>충전하러 가기</a>';
+      pay += '</div>';
+    }
+    if (pending && S.testpay) pay += '<p class="test-note">결제 수단이 아직 연결되지 않아 테스트 결제만 됩니다. 실제로 돈이 나가지 않아요.</p><button class="btn btn-wide" type="button" id="testpay">테스트 결제하기</button>';
+    app.innerHTML = '<section class="sheet"><h1>' + esc(pending ? '결제' : o.status_text) + '</h1><p class="lead">주문번호 ' + esc(o.order_no) + ' · ' + esc(o.created_at) + '</p>' +
+      (o.tracking ? '<p class="tracking">' + esc(o.courier) + ' 운송장 ' + esc(o.tracking) + '</p>' : '') + plainLines(o.items) + totals(o) +
+      '<p class="ship-to">' + esc(o.name) + ' · ' + esc(o.phone) + '<br>(' + esc(o.postcode) + ') ' + esc(o.addr1) + ' ' + esc(o.addr2) + (o.memo ? '<br>' + esc(o.memo) : '') + '</p>' +
+      pay + (pending ? '' : '<p class="hint">이 페이지 주소를 저장해 두면 언제든 배송 상태를 볼 수 있어요.</p>') + '</section>';
+    if (pending && o.naver) {
+      var sdk = loadScript('https://nsp.pay.naver.com/sdk/js/naverpay.min.js').catch(function () {});
+      on('#npay', 'click', function () {
+        sdk.then(function () {
+          if (!window.Naver || !Naver.Pay) return notice('네이버페이를 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요.');
+          Naver.Pay.create(o.naver.create).open(o.naver.open);
+        });
+      });
+    }
+    on('[data-return]', 'click', function () { setReturn(location.hash); });
+    function payWith(btn, url) {
+      busy(btn, true);
+      api(path + url, { method: 'POST' }).then(function () { setReturn(null); S.cart_count = 0; chrome(); render(); })
+        .catch(function (e) { busy(btn, false); notice(e.message); });
+    }
+    on('#creditpay', 'click', function () { if (confirm('충전금에서 ' + won(o.total) + '을 결제할까요?')) payWith(this, '/credit-pay'); });
+    on('#testpay', 'click', function () { payWith(this, '/test-pay'); });
+    if (!pending) loadState();
+  }
+
+  // ── 충전금: 계좌이체하면 자동으로 충전 ──
+  var TX_LABEL = { use: '주문 결제', refund: '주문 취소 환불' };
+  function vCredit() { return api('/api/credit').then(drawCredit); }
+  function drawCredit(w) {
+    clearTimeout(timer);
+    if (!w.on) { app.innerHTML = '<section class="sheet sheet-narrow"><h1>충전금</h1><p class="lead">충전 기능이 아직 연결되지 않았어요.</p><a class="btn" href="#/">처음으로 가기</a></section>'; return; }
+    if (!w.logged_in) {
+      S.credit_user = false;
+      app.innerHTML = '<section class="sheet sheet-narrow"><h1>충전금</h1><p class="lead">계좌이체로 충전해 두고, 주문할 때 바로 결제해요.</p><form class="fields" id="enter">' +
+        '<label>연락처<input name="phone" required inputmode="tel" autocomplete="tel" placeholder="010-0000-0000"></label>' +
+        '<label>비밀번호 (6자 이상)<input type="password" name="password" required minlength="6" autocomplete="current-password"></label>' +
+        '<button class="btn btn-wide" type="submit" data-mode="login">로그인</button>' +
+        '<button class="btn btn-quiet btn-wide" type="submit" data-mode="signup" style="margin-top:0">새 충전 계정 만들기</button></form></section>';
+      on('#enter', 'submit', function (ev) {
+        ev.preventDefault();
+        var b = formData(this); b.mode = (ev.submitter && ev.submitter.dataset.mode) || 'login';
+        api('/api/credit/enter', { method: 'POST', body: b }).then(function (w2) { S.credit_user = true; notice(''); if (returnTo) go(returnTo); else drawCredit(w2); })
+          .catch(function (e) { notice(e.message); });
+      });
+      return;
+    }
+    S.credit_user = true;
+    var waiting = w.history.filter(function (t) { return t.kind === 'charge' && t.status === 'waiting'; });
+    var past = w.history.filter(function (t) { return !(t.kind === 'charge' && t.status === 'waiting'); });
+    app.innerHTML = '<section class="sheet"><h1>충전금</h1><p class="balance">' + won(w.balance) + '</p><p class="lead">' + esc(w.phone) + ' 계정</p>' +
+      (returnTo ? '<a class="btn btn-mint" href="' + esc(returnTo) + '">결제하던 주문으로 돌아가기</a>' : '') +
+      '<h2>충전하기</h2><p class="hint">금액을 고르면 입금 계좌가 나와요. 그 계좌로 이체하면 자동으로 충전돼요.</p><div class="chips">' +
+      w.options.map(function (a) { return '<button class="btn btn-quiet" type="button" data-amount="' + a + '">+' + won(a) + '</button>'; }).join('') + '</div>' +
+      (waiting.length ? '<h2>입금을 기다리는 중</h2>' + waiting.map(function (t) {
+        var acct = (t.note.match(/\d[\d-]{6,}/) || [''])[0];
+        return '<div class="paybox"><h3>' + won(t.amount) + '을 이 계좌로 보내 주세요</h3><p>' + esc(t.note) + '</p>' +
+          (acct ? '<p style="margin-top:10px"><button class="link" type="button" data-copy="' + esc(acct) + '">계좌번호 복사</button></p>' : '') + '</div>';
+      }).join('') + '<button class="btn btn-wide" type="button" id="refresh">입금 확인</button>' : '') +
+      '<h2>내역</h2>' + (past.length ? '<ul class="tx">' + past.map(function (t) {
+        var bad = t.status !== 'done', label = t.kind === 'charge' ? (bad ? '충전 취소 · 기한 만료' : '계좌이체 충전') : (TX_LABEL[t.kind] || t.kind);
+        return '<li><time>' + esc(t.created_at) + '</time><span>' + esc(label) + (t.kind !== 'charge' && t.note ? ' <span class="muted">' + esc(t.note) + '</span>' : '') + '</span>' +
+          '<b class="' + (bad ? 'bad' : t.amount < 0 ? 'minus' : 'plus') + '">' + (t.amount > 0 ? '+' : '−') + won(Math.abs(t.amount)) + '</b></li>';
+      }).join('') + '</ul>' : '<p class="hint">아직 내역이 없어요.</p>') +
+      '<div class="danger"><button class="link" type="button" id="creditOut">충전 계정 로그아웃</button></div></section>';
+    bindCopy();
+    on('[data-amount]', 'click', function () {
+      var btn = this; busy(btn, true);
+      api('/api/credit/charge/start', { method: 'POST', body: { amount: Number(btn.dataset.amount) } }).then(function (c) {
+        return loadScript('https://js.tosspayments.com/v2/standard').then(function () {
+          if (!window.TossPayments) throw new Error('토스 결제창을 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요.');
+          return TossPayments(c.client_key).payment({ customerKey: c.customer_key }).requestPayment({
+            method: 'VIRTUAL_ACCOUNT', amount: { currency: 'KRW', value: c.amount }, orderId: c.order_id, orderName: c.order_name,
+            successUrl: c.success_url, failUrl: c.fail_url, virtualAccount: { validHours: 24 }
+          });
+        }, function () { throw new Error('토스 결제창을 불러오지 못했어요. 잠시 뒤 다시 눌러 주세요.'); });
+      }).catch(function (e) { busy(btn, false); if (!e || e.code !== 'USER_CANCEL') notice((e && e.message) || '충전을 시작하지 못했어요.'); });
+    });
+    function refresh(quiet) {
+      api('/api/credit/refresh', { method: 'POST' }).then(function (w2) {
+        if (location.hash.indexOf('#/credit') !== 0) return;
+        if (!quiet || w2.balance !== w.balance) notice(w2.message);
+        drawCredit(w2);
+      }).catch(function (e) { if (!quiet) notice(e.message); });
+    }
+    on('#refresh', 'click', function () { busy(this, true); refresh(false); });
+    if (waiting.length) timer = setTimeout(function () { refresh(true); }, 15000);  // 입금되면 화면이 알아서 바뀜
+    on('#creditOut', 'click', function () { api('/api/credit/logout', { method: 'POST' }).then(function () { S.credit_user = false; setReturn(null); render(); }); });
+  }
+
+  // ── 상점: 주문 조회 ──
+  function vLookup() {
+    app.innerHTML = '<section class="sheet sheet-narrow"><h1>주문 조회</h1><form class="fields" id="lookup">' +
+      '<label>주문번호<input name="order_no" required placeholder="261120-AB12CD34"></label>' +
+      '<label>주문할 때 적은 연락처<input name="phone" required inputmode="tel"></label>' +
+      '<button class="btn btn-wide" type="submit">주문 찾기</button></form></section>';
+    on('#lookup', 'submit', function (ev) {
+      ev.preventDefault();
+      api('/api/lookup', { method: 'POST', body: formData(this) }).then(function (o) { go('#/order/' + o.order_no + '/' + o.token); }).catch(function (e) { notice(e.message); });
+    });
+    return Promise.resolve();
+  }
+
+  // ── 관리자 ──
+  function adminBar(section) {
+    return '<div class="admin-bar"><a href="#/admin"' + (section === 'orders' ? ' aria-current="page"' : '') + '>주문</a>' +
+      '<a href="#/admin/products"' + (section === 'products' ? ' aria-current="page"' : '') + '>상품</a>' +
+      '<form id="logout"><button class="link" type="submit">로그아웃</button></form></div>';
+  }
+  function bindLogout() {
+    on('#logout', 'submit', function (ev) {
+      ev.preventDefault();
+      api('/api/admin/logout', { method: 'POST' }).then(loadState).then(function () { go('#/'); });
+    });
+  }
+  function vLogin() {
+    app.innerHTML = '<section class="sheet sheet-narrow"><h1>관리자 로그인</h1><form class="fields" id="login">' +
+      '<label>비밀번호<input type="password" name="password" required autofocus autocomplete="current-password"></label>' +
+      '<button class="btn btn-wide" type="submit">로그인</button></form></section>';
+    on('#login', 'submit', function (ev) {
+      ev.preventDefault();
+      api('/api/admin/login', { method: 'POST', body: formData(this) }).then(loadState).then(function () { go('#/admin'); })
+        .catch(function (e) { notice(e.message); });
+    });
+    return Promise.resolve();
+  }
+  var TABS = ['paid', 'purchased', 'shipped', 'done', 'review', 'pending', 'canceled'];
+  function vAdminOrders(tab) {
+    return api('/api/admin/orders?s=' + encodeURIComponent(tab || 'paid')).then(function (d) {
+      var h = adminBar('orders') + '<section class="panel"><h1>주문</h1>' +
+        (S.testpay ? '<p class="test-note">결제 수단이 연결되지 않아 테스트 결제 모드입니다. 지금은 누구나 돈을 내지 않고 주문을 만들 수 있으니, 공개하기 전에 .env 에 결제 키를 넣어 주세요.</p>' : '') +
+        '<nav class="tabs" aria-label="주문 상태">' + TABS.map(function (k) {
+          return '<a href="#/admin/orders/' + k + '"' + (d.tab === k ? ' aria-current="page"' : '') + '>' + esc(d.labels[k]) + ' <b>' + (d.counts[k] || 0) + '</b></a>';
+        }).join('') + '<a href="#/admin/orders/all"' + (d.tab === 'all' ? ' aria-current="page"' : '') + '>전체</a></nav>';
+      if (d.orders.length) {
+        h += '<table class="grid"><thead><tr><th>주문번호</th><th>상품</th><th>받는 분</th><th class="num">금액</th><th>상태</th><th>주문 시각</th></tr></thead><tbody>' + d.orders.map(function (o) {
+          return '<tr><td><a href="#/admin/order/' + o.id + '">' + esc(o.order_no) + '</a></td><td>' + esc(o.summary) + '</td><td>' + esc(o.name) + '</td><td class="num">' + won(o.total) +
+            '</td><td><span class="tag tag-' + esc(o.status) + '">' + esc(d.labels[o.status]) + '</span></td><td>' + esc(o.created_at) + '</td></tr>';
+        }).join('') + '</tbody></table>';
+      } else {
+        h += '<p class="lead">' + (d.tab === 'paid' ? '처리할 주문이 없어요. 새 주문이 들어오면 여기에 나타납니다.' : '이 상태의 주문이 없어요.') + '</p>';
+      }
+      app.innerHTML = h + '</section>';
+      bindLogout();
+      timer = setTimeout(render, 60000);  // 새 주문 확인
+    });
+  }
+  function drawAdminOrder(o) {
+    var copyRows = [['받는 분', o.name], ['연락처', o.phone], ['우편번호', o.postcode], ['주소', o.addr1], ['상세 주소', o.addr2], ['배송 메모', o.memo]].filter(function (r) { return r[1]; });
+    var all = o.name + '\n' + o.phone + '\n(' + o.postcode + ') ' + o.addr1 + ' ' + o.addr2 + (o.memo ? '\n' + o.memo : '');
+    app.innerHTML = adminBar('orders') + '<section class="panel"><p><a href="#/admin">주문 목록으로</a></p>' +
+      '<h1>주문 ' + esc(o.order_no) + ' <span class="tag tag-' + esc(o.status) + '">' + esc(o.status_label) + '</span></h1>' +
+      '<p class="lead">' + esc(o.created_at) + ' 주문' + (o.paid_at ? ' · ' + esc(o.paid_at) + ' ' + esc(o.pay_method) + ' ' + won(o.total) : '') + '</p>' +
+      '<div class="two"><div><h2>1. 구매처에서 주문하기</h2><ul class="buy-list">' + o.items.map(function (i) {
+        return '<li><div><strong>' + esc(i.name) + '</strong> × ' + i.qty + ' <span class="muted">(판매가 ' + won(i.price) + ')</span>' + (i.source_note ? '<br><span class="muted">' + esc(i.source_note) + '</span>' : '') + '</div>' +
+          (/^https?:\/\//.test(i.source_url || '') ? '<a class="btn btn-quiet" href="' + esc(i.source_url) + '" target="_blank" rel="noopener noreferrer">구매처 열기</a>' : '<span class="muted">구매처 링크 없음</span>') + '</li>';
+      }).join('') + '</ul>' + (o.status === 'paid' ? '<button class="btn" data-act="purchased">구매처 주문 완료로 표시</button>' : '') + '</div>' +
+      '<div><h2>2. 붙여 넣을 배송 정보</h2><dl class="copy-list">' + copyRows.map(function (r) {
+        return '<div><dt>' + r[0] + '</dt><dd>' + esc(r[1]) + '</dd><button class="link" type="button" data-copy="' + esc(r[1]) + '">복사</button></div>';
+      }).join('') + '</dl><button class="btn btn-quiet" type="button" data-copy="' + esc(all) + '">전체 복사</button></div></div>' +
+      '<h2>3. 운송장 등록</h2><form class="inline" id="ship"><label>택배사<input name="courier" value="' + esc(o.courier) + '" placeholder="CJ대한통운"></label>' +
+      '<label>운송장 번호<input name="tracking" value="' + esc(o.tracking) + '"></label><button class="btn" type="submit">배송 중으로 표시</button>' +
+      (o.status === 'shipped' ? '<button class="btn btn-quiet" type="button" data-act="done">배송 완료로 표시</button>' : '') + '</form>' +
+      '<h2>메모</h2><form class="fields" id="note"><label class="sr" for="noteText">관리자 메모</label><textarea id="noteText" name="admin_note" rows="3" placeholder="구매처 주문번호 같은 걸 적어 두세요. 손님에게는 보이지 않아요.">' + esc(o.admin_note) + '</textarea>' +
+      '<div><button class="btn btn-quiet" type="submit">메모 저장</button></div></form>' +
+      (o.status !== 'canceled' ? '<div class="danger"><button class="link" type="button" data-act="cancel">주문 취소로 표시</button>' + (o.payment_id ? '<span class="muted">결제번호 ' + esc(o.payment_id) + '</span>' : '') + '</div>' : '') + '</section>';
+    bindLogout();
+    function act(body) {
+      api('/api/admin/orders/' + o.id, { method: 'POST', body: body }).then(function (d) { notice(d.message); drawAdminOrder(d.order); }).catch(function (e) { notice(e.message); });
+    }
+    on('[data-act]', 'click', function () {
+      var a = this.dataset.act;
+      if (a === 'cancel' && !confirm('이 주문을 취소로 표시할까요? 환불은 네이버페이 센터에서 따로 해야 합니다.')) return;
+      act({ action: a });
+    });
+    on('#ship', 'submit', function (ev) { ev.preventDefault(); var b = formData(this); b.action = 'ship'; act(b); });
+    on('#note', 'submit', function (ev) { ev.preventDefault(); var b = formData(this); b.action = 'note'; act(b); });
+    bindCopy();
+  }
+  function vAdminOrder(id) { return api('/api/admin/orders/' + encodeURIComponent(id)).then(function (d) { drawAdminOrder(d.order); }); }
+
+  function vAdminProducts() {
+    return api('/api/admin/products').then(function (ps) {
+      var h = adminBar('products') + '<section class="panel"><div class="panel-head"><h1>상품</h1><a class="btn" href="#/admin/product/new">상품 추가</a></div>';
+      if (ps.length) {
+        h += '<table class="grid"><thead><tr><th>사진</th><th>상품</th><th class="num">가격</th><th class="num">재고</th><th>진열</th><th>구매처</th></tr></thead><tbody>' + ps.map(function (p) {
+          return '<tr><td>' + (p.images.length ? '<img class="mini" src="' + esc(p.images[0]) + '" alt="">' : '<span class="muted">없음</span>') + '</td><td><a href="#/admin/product/' + p.id + '">' + esc(p.name) + '</a></td><td class="num">' + won(p.price) + '</td><td class="num">' + p.stock + '</td><td>' +
+            (p.active ? '진열 중' : '<span class="muted">숨김</span>') + '</td><td>' + (/^https?:\/\//.test(p.source_url) ? '<a href="' + esc(p.source_url) + '" target="_blank" rel="noopener noreferrer">열기</a>' : '<span class="muted">없음</span>') + '</td></tr>';
+        }).join('') + '</tbody></table>';
+      } else h += '<p class="lead">아직 상품이 없어요. ‘상품 추가’로 첫 상품을 올려 보세요.</p>';
+      app.innerHTML = h + '</section>';
+      bindLogout();
+    });
+  }
+  function vAdminProduct(id) {
+    var isNew = id === 'new';
+    return (isNew ? Promise.resolve({ name: '', price: '', stock: 10, description: '', source_url: '', source_note: '', active: true, image_rows: [] }) : api('/api/admin/products/' + encodeURIComponent(id))).then(function (p) {
+      app.innerHTML = adminBar('products') + '<section class="panel-narrow"><p><a href="#/admin/products">상품 목록으로</a></p><h1>' + (isNew ? '상품 추가' : '상품 수정') + '</h1>' +
+        '<form class="fields" id="product">' + (isNew ? '' : '<input type="hidden" name="id" value="' + p.id + '">') +
+        '<label>상품 이름<input name="name" value="' + esc(p.name) + '" required maxlength="80"></label>' +
+        '<div class="row"><label>판매 가격 (원)<input name="price" value="' + esc(p.price) + '" required inputmode="numeric"></label><label>재고<input name="stock" type="number" min="0" value="' + esc(p.stock) + '" required></label></div>' +
+        '<label>설명<textarea name="description" rows="7">' + esc(p.description) + '</textarea></label>' +
+        '<fieldset class="photos"><legend>상품 사진 (최대 8장)</legend>' +
+        (p.image_rows.length ? '<ul class="photo-grid">' + p.image_rows.map(function (im, i) {
+          return '<li><img src="' + esc(im.url) + '" alt="사진 ' + (i + 1) + '"><label class="check"><input type="radio" name="main_image" value="' + im.id + '"' + (i ? '' : ' checked') + '> 대표 사진</label>' +
+            '<label class="check"><input type="checkbox" name="delete_image" value="' + im.id + '"> 삭제</label></li>';
+        }).join('') + '</ul>' : '') +
+        '<label class="drop" id="drop"><span><b>사진 고르기</b> 또는 여기로 끌어다 놓기<br><small>png, jpg, webp, gif · 여러 장을 한 번에 고를 수 있어요</small></span>' +
+        '<input type="file" id="images" name="images" accept=".png,.jpg,.jpeg,.webp,.gif,image/*" multiple></label><ul class="photo-grid" id="preview" aria-live="polite"></ul></fieldset>' +
+        '<label>구매처 링크 (손님에게 보이지 않음)<input name="source_url" value="' + esc(p.source_url) + '" placeholder="https://" maxlength="500"></label>' +
+        '<label>구매 메모 (손님에게 보이지 않음)<input name="source_note" value="' + esc(p.source_note) + '" placeholder="옵션: 블랙 / M, 원가 12,000원" maxlength="300"></label>' +
+        '<label class="check"><input type="checkbox" name="active"' + (p.active ? ' checked' : '') + '> 상점에 진열하기</label>' +
+        '<button class="btn btn-wide" type="submit">상품 저장</button></form>' +
+        (isNew ? '' : '<div class="danger"><button class="link" type="button" id="del">상품 삭제</button></div>') + '</section>';
+      bindLogout();
+      var input = document.getElementById('images'), drop = document.getElementById('drop'), preview = document.getElementById('preview');
+      function show() {
+        preview.innerHTML = '';
+        Array.prototype.forEach.call(input.files, function (f) {
+          if (f.type.indexOf('image/') !== 0) return;
+          var li = document.createElement('li'), img = document.createElement('img'), cap = document.createElement('span');
+          img.src = URL.createObjectURL(f); img.alt = f.name; cap.textContent = '저장하면 올라가요'; cap.className = 'muted';
+          li.appendChild(img); li.appendChild(cap); preview.appendChild(li);
+        });
+      }
+      input.addEventListener('change', show);
+      ['dragenter', 'dragover'].forEach(function (e) { drop.addEventListener(e, function (ev) { ev.preventDefault(); drop.classList.add('over'); }); });
+      ['dragleave', 'drop'].forEach(function (e) { drop.addEventListener(e, function (ev) { ev.preventDefault(); drop.classList.remove('over'); }); });
+      drop.addEventListener('drop', function (ev) { if (ev.dataTransfer.files.length) { input.files = ev.dataTransfer.files; show(); } });
+      on('#product', 'submit', function (ev) {
+        ev.preventDefault();
+        var btn = this.querySelector('button[type=submit]'); busy(btn, true);
+        api('/api/admin/products', { method: 'POST', form: new FormData(this) }).then(function (d) { pendingNotice = d.message; go('#/admin/products'); })
+          .catch(function (e) { busy(btn, false); notice(e.message); });
+      });
+      on('#del', 'click', function () {
+        if (!confirm('이 상품을 삭제할까요? 되돌릴 수 없어요.')) return;
+        api('/api/admin/products/' + p.id + '/delete', { method: 'POST' }).then(function () { pendingNotice = '‘' + p.name + '’을(를) 삭제했어요.'; go('#/admin/products'); })
+          .catch(function (e) { notice(e.message); });
+      });
+    });
+  }
+
+  // ── 주소(#/...) → 화면 ──
+  function render() {
+    clearTimeout(timer);
+    var r = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent);
+    notice(pendingNotice); pendingNotice = null;
+    document.title = S.shop.name || '';
+    var view;
+    if (r[0] === 'admin') {
+      if (!S.admin) view = vLogin();
+      else if (r[1] === 'order') view = vAdminOrder(r[2]);
+      else if (r[1] === 'products') view = vAdminProducts();
+      else if (r[1] === 'product') view = vAdminProduct(r[2] || 'new');
+      else view = vAdminOrders(r[1] === 'orders' ? r[2] : 'paid');
+    }
+    else if (r[0] === 'p') view = vProduct(r[1]);
+    else if (r[0] === 'cart') view = vCart();
+    else if (r[0] === 'checkout') view = vCheckout();
+    else if (r[0] === 'order') view = vOrder(r[1], r[2]);
+    else if (r[0] === 'orders') view = vLookup();
+    else if (r[0] === 'credit') view = vCredit();
+    else if (!r[0]) view = vHome();
+    else { message('찾는 페이지가 없어요', '주소가 바뀌었거나 판매가 끝난 상품일 수 있어요.'); return; }
+    view.then(function () { if (!noticeBox.innerHTML) window.scrollTo(0, 0); }).catch(function (e) {
+      if (e.status === 401) { S.admin = false; chrome(); return render(); }
+      message(e.status === 404 ? '찾는 페이지가 없어요' : '화면을 불러오지 못했어요', e.message);
+    });
+  }
+
+  window.addEventListener('hashchange', render);
+  loadState().then(function () {
+    var m = new URLSearchParams(location.search).get('m');  // 결제에서 돌아올 때 서버가 붙인 안내
+    if (m) { pendingNotice = m; history.replaceState(null, '', location.pathname + location.hash); }
+    render();
+  }).catch(function (e) { message('상점을 불러오지 못했어요', e.message); });
+})();
+</script>
+</body>
+</html>
